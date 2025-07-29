@@ -1,0 +1,43 @@
+---
+title: "Titanic"
+author: "Andy Chen"
+date: "2025-07-22"
+output: pdf_document
+---
+
+```{r}
+library(tidyr)
+data <- read.csv("../data/train.csv")
+```
+Cleaning the data here, so we have empty values just replace them as NA. And Embarked only has two rows of NA so we can drop those two without affecting the whole data set too much.
+```{r}
+data$Embarked[data$Embarked == ""] <- NA
+data$Cabin[data$Cabin == ""] <- NA
+cleaned_data <- data %>%
+  drop_na('Embarked')
+sapply(data, function(x) sum(is.na(x)))
+```
+
+Some preprocessing here. Also seeing if the large amount of missing values of the Cabin family is statistically significant.
+```{r}
+cleaned_data$missingCabin<- is.na(cleaned_data$Cabin)
+cleaned_data$Survived.f <- factor(cleaned_data$Survived)
+cleaned_data$Cabin <- NULL
+cleaned_data$Age[is.na(cleaned_data$Age)] <- mean(cleaned_data$Age, na.rm = TRUE)
+summary(glm(Survived.f~missingCabin,family = binomial,data=cleaned_data))
+```
+```{r}
+sapply(cleaned_data, function(x) sum(is.na(x)))
+```
+```{r}
+model<-glm(formula = Survived.f~.-Name-Ticket-Survived , family='binomial',data=cleaned_data)
+```
+```{r}
+summary(model)
+```
+```{r}
+final_model<-step(model)
+```
+
+
+
