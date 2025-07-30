@@ -7,7 +7,9 @@ output: pdf_document
 
 ```{r}
 library(tidyr)
+library(car)
 data <- read.csv("../data/train.csv")
+test_data<- read.csv("../data/test.csv")
 ```
 Cleaning the data here, so we have empty values just replace them as NA. And Embarked only has two rows of NA so we can drop those two without affecting the whole data set too much.
 ```{r}
@@ -36,8 +38,41 @@ model<-glm(formula = Survived.f~.-Name-Ticket-Survived , family='binomial',data=
 summary(model)
 ```
 ```{r}
-final_model<-step(model)
+stepped_model<-step(model, trace = 0)
+summary(stepped_model)
+```
+Testing goodness of fit here.
+```{r}
+deviance(stepped_model)<qchisq(0.95, df = stepped_model$df.residual)
+```
+```{r}
+head(test_data)
 ```
 
+```{r}
+test_data$Embarked[test_data$Embarked == ""] <- NA
+test_data$Cabin[test_data$Cabin == ""] <- NA
+test_data$Age[is.na(test_data$Age)] <- mean(test_data$Age, na.rm = TRUE)
+test_data$Fare[is.na(test_data$Fare)] <- mean(test_data$Fare, na.rm = TRUE)
+test_data$missingCabin<- is.na(test_data$Cabin)
+test_data$Cabin <- NULL
+sapply(test_data, function(x) sum(is.na(x)))
+```
+Getting rid of columns that the model won't need.
+```{r}
+test_data$Name<-NULL
+test_data$Ticket<-NULL
+test_data$Parch<-NULL
+test_data$Fare<-NULL
+```
 
+```{r}
+predicted_probabilities <- predict(stepped_model, newdata = test_data, type = "response")
+predicted_survival <- ifelse(predicted_probabilities > 0.5, 1, 0)
+output <- data.frame(
+  PassengerId = test_data$PassengerId,
+  Survived = predicted_survival
+ )
+write.csv(output, file = "predictions.csv", row.names = FALSE)
+```
 
